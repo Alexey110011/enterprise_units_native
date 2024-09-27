@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+    <button id = "clear">ClearStorage</button>
+<script src = "go-debug.js">
+</script>
+
+<div id = "myDiagramDiv" style = "width:100vh; height:50vh"></div>
+
+<form onsubmit = "simpleAdd(event)">
+    <input type = "text" id = "unit_name" placeholder = "Unit name"/>
+    <input type = "text" id = "unit_parent" placeholder  ="Upper unit"/>
+    <input type = "submit" value = "add unit"/>    
+</form>
+<form  onsubmit = "simpleRemove(event)">
+    <select id ="units_to_remove">
+    </select>
+    <input type = "submit" value ="Remove unit"/>
+</form>
+<div id = "children_to_remove">
+
+</div>
+<script>
+    
+    let units = (!localStorage.units)?
+    [{key:"1",name:"plant" }]:
+    JSON.parse(localStorage.getItem('units'))
+    localStorage.setItem('units', JSON.stringify(units))
+    console.log(localStorage)
+    console.log('Units',units)
+
+    let units_to_remove = document.getElementById('units_to_remove')
+    for(let i=0;i<units.length;i++){
+        let unit_to_remove = document.createElement('option')
+        unit_to_remove.innerText =units[i].name
+        units_to_remove.append(unit_to_remove)
+    }
+
+function simpleAdd(event){
+    event.preventDefault()
+    let unit_name = document.getElementById('unit_name').value
+    let unit_parent = document.getElementById('unit_parent').value
+    let units = JSON.parse(localStorage.getItem('units'))
+    if (units.length==1){
+        units.push({key:(units.length+1).toString(),
+        parent:"1",
+        name:unit_name
+    })
+    localStorage.setItem('units', JSON.stringify(units))
+    } else if(!unit_parent){
+        units.push({key:(units.length+1).toString(),
+        parent:"1",
+        name:unit_name
+    })
+    localStorage.setItem('units', JSON.stringify(units))
+    } else  {units.map(item=>{
+    if(item.name == unit_parent){
+        units.push({
+        key:(units.length+1).toString(),
+        parent:item.key,
+        name:unit_name
+        })
+        localStorage.setItem('units', JSON.stringify(units))
+    }
+    })}
+    console.log("units1", units)
+    window.location.reload(true)
+    }
+    
+function simpleRemove(event){
+    event.preventDefault()
+    let key;
+    console.log('VAlue',units_to_remove.value)
+    let list_of_children = units.map(item=>{
+        if (item.name==units_to_remove.value){
+            key = item.key
+            return key
+        } 
+    })    
+    console.log("Key to remove", key,list_of_children)
+    let removing_children = units.filter(item=>item.parent==key)
+    if(removing_children.length==0){
+        units.map((item, index)=>{
+            if(item.name==units_to_remove.value){
+                units.splice(index,1)
+                localStorage.setItem('units',JSON.stringify(units))
+                console.log("index", units)
+                window.location.reload(true)
+            } 
+        })
+    } else {alert("You should delete children of unit before")}
+        console.log('Removing items', removing_children)
+        for (let i =0;i<removing_children.length;i++){
+            let removing_child = document.createElement('div')
+            removing_child.innerText = removing_children[i].name
+            removing_child.addEventListener('click', removeChild)
+            document.getElementById('children_to_remove').append(removing_child)
+        }
+}
+
+function removeChild(evt){
+    units.map((item, index)=>{
+        if(item.name==evt.currentTarget.innerText){
+            console.log(index)
+            units.splice(index,1)
+            localStorage.setItem('units', JSON.stringify(units))
+            window.location.reload(true)
+            console.log("units after",units)
+        }
+    })
+     evt.currentTarget.innerText=''
+}
+    
+document.getElementById("clear").addEventListener('click', clear)
+function clear(){
+    localStorage.removeItem('units')
+    console.log("Clear!")
+}
+
+const myDiagram = new go.Diagram('myDiagramDiv',{
+    "undoManager.isEnabled":true
+}) 
+
+myDiagram.nodeTemplate  =new go.Node("Horizontal",
+    {background:"yellow"})
+    .add(
+    new go.TextBlock("Default-Text", 
+    {margin:12, stroke: "green", font: "bold 16px serif"})
+    .bind("text","name")
+    )
+    myDiagram.linkTemplate  = new go.Link(
+        {routing:go.Routing.Orthogonal, corner:5})
+        .add(new go.Shape({strokeWidth:3, stroke:"#555"})
+    )
+
+myDiagram.model = new go.TreeModel(units)
+myDiagram.layout = new go.TreeLayout({angle:0, layerSpacing:35})
+</script>
+</body>
+</html>
